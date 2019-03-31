@@ -6,10 +6,11 @@ from bs4 import BeautifulSoup
 from exchangelib import Account, Credentials, Mailbox, Message
 import requests
 
-failCount = 0
-maxFailCount = 3
-nextCheck = 60 # seconds until next check when failCount < maxFailCount
-maxFailCountReachedNextCheck = 1800 # seconds until next check when maxFailCount reached
+# quick point -- globals are often all caps -- same as envvars
+# just convention, not required
+MAXFAILCOUNT = 3
+nextCheck = 60 
+maxFailCountReachedNextCheck = 1800 
 
 # pull confidential variables from environment variables
 web01Url01 = os.getenv('web01Url01')
@@ -59,21 +60,28 @@ loginData = {
     'ButtonLogin' : 'Login'
 }
 
-def checkFail():
+def checkFail(failCount):
     print('checkFailed')
     print('Incrementing fail count')
-    global failCount
     failCount += 1
     print('failCount is now', str(failCount))
-    if failCount < maxFailCount:
+    if failCount < MAXFAILCOUNT:
         time.sleep(nextCheck)
-    else:
-        print('Sending failure email!')
-        sendEmail()
-        print('Fail threshold reached sleeping for', str(maxFailCountReachedNextCheck), 'seconds!')
-        time.sleep(maxFailCountReachedNextCheck)
-    pageCheck()
+    return failCount
 
+
+def maxFail(failCount):
+    print('Sending failure email!')
+    try:
+        sendEmail()
+    except:
+        "failed to send email. I'm ignoring this for now. "
+    print('Fail threshold reached sleeping for', str(maxFailCountReachedNextCheck), 'seconds!')
+    # if you're just going to sleep, and try again...
+    # you should really send an email when it's back up
+    time.sleep(maxFailCountReachedNextCheck)
+    failCount = 0
+    return failCount
 
 
 def checkSuccess():
@@ -81,9 +89,9 @@ def checkSuccess():
     failCount = 0
     print('sleeping for', str(nextCheck), 'seconds.')
     time.sleep(nextCheck)
-    pageCheck()
+    return failCount
 
-def pageCheck():
+def pageCheck(failCount):
     with requests.Session() as s:
         r = s.get(web01Url01)
         soup = BeautifulSoup(r.content, 'html.parser')
@@ -97,9 +105,29 @@ def pageCheck():
             if a.text == web01Content01:
                 validated = True
         if validated:
-            checkSuccess()
-        else:
-            checkFail()
+            failCount = checkSuccess()
+            return failCount
+        failCount = checkFail(failCount)
+        return failCount
+
+
+def main(failCount, deathcount):
+    # fC starts at 0
+    while failCount < MAXFAILCOUNT:
+        try:
+            # I try to connect and increment on failure
+            # otherwise...i run forever?
+            failCount = pageCheck(failCount)
+        except Exception as e:
+            print("Something unknown has occurred.")
+            print(e)
+            exit()
+    failCount = maxFail(failCount)
+    deathcount += 1
+    while deathcount < 100:
+        # 100 death knells, meaning, what, 300 + failures?
+        main(failCount, deathcount)
+
 
 def emailConnection():
     credentials = Credentials(workEmailAddress, workEmailPassword)
@@ -117,4 +145,5 @@ def sendEmail():
     )
     m.send_and_save()
 
-pageCheck()
+if __name__ == "__main__":
+    main(0, 0)

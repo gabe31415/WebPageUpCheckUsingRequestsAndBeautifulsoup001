@@ -127,6 +127,7 @@ def main(failCount, deathcount):
     while deathcount < 100:
         # 100 death knells, meaning, what, 300 + failures?
         main(failCount, deathcount)
+    exit()
 
 
 def emailConnection():

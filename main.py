@@ -6,11 +6,9 @@ from bs4 import BeautifulSoup
 from exchangelib import Account, Credentials, Mailbox, Message
 import requests
 
-# quick point -- globals are often all caps -- same as envvars
-# just convention, not required
 MAXFAILCOUNT = 3
-nextCheck = 60 
-maxFailCountReachedNextCheck = 1800 
+NEXTCHECK = 60 
+MAXFAILCOUNTREACHEDNEXTCHECK = 1800 
 
 # pull confidential variables from environment variables
 web01Url01 = os.getenv('web01Url01')
@@ -66,7 +64,7 @@ def checkFail(failCount):
     failCount += 1
     print('failCount is now', str(failCount))
     if failCount < MAXFAILCOUNT:
-        time.sleep(nextCheck)
+        time.sleep(NEXTCHECK)
     return failCount
 
 
@@ -76,10 +74,10 @@ def maxFail(failCount):
         sendEmail()
     except:
         "failed to send email. I'm ignoring this for now. "
-    print('Fail threshold reached sleeping for', str(maxFailCountReachedNextCheck), 'seconds!')
+    print('Fail threshold reached sleeping for', str(MAXFAILCOUNTREACHEDNEXTCHECK), 'seconds!')
     # if you're just going to sleep, and try again...
     # you should really send an email when it's back up
-    time.sleep(maxFailCountReachedNextCheck)
+    time.sleep(MAXFAILCOUNTREACHEDNEXTCHECK)
     failCount = 0
     return failCount
 
@@ -87,8 +85,8 @@ def maxFail(failCount):
 def checkSuccess():
     print('checkSucceeded', datetime.datetime.now())
     failCount = 0
-    print('sleeping for', str(nextCheck), 'seconds.')
-    time.sleep(nextCheck)
+    print('sleeping for', str(NEXTCHECK), 'seconds.')
+    time.sleep(NEXTCHECK)
     return failCount
 
 def pageCheck(failCount):
@@ -115,8 +113,6 @@ def main(failCount, deathcount):
     # fC starts at 0
     while failCount < MAXFAILCOUNT:
         try:
-            # I try to connect and increment on failure
-            # otherwise...i run forever?
             failCount = pageCheck(failCount)
         except Exception as e:
             print("Something unknown has occurred.")

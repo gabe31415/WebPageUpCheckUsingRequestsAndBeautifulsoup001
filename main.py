@@ -90,23 +90,30 @@ def checkSuccess():
     return failCount
 
 def pageCheck(failCount):
-    with requests.Session() as s:
-        r = s.get(web01Url01)
-        soup = BeautifulSoup(r.content, 'html.parser')
-        loginData['__EVENTVALIDATION'] = soup.find('input', attrs={'name': '__EVENTVALIDATION'})['value']
-        loginData['__VIEWSTATE'] = soup.find('input', attrs={'name': '__VIEWSTATE'})['value']
-        r = s.post(web01Url01, data = loginData)
-        soup = BeautifulSoup(r.content, 'html.parser')
-        anchors = soup.find_all('a')
-        validated = False
-        for a in anchors:
-            if a.text == web01Content01:
-                validated = True
-        if validated:
-            failCount = checkSuccess()
+    try:
+        with requests.Session() as s:
+            r = s.get(web01Url01)
+            soup = BeautifulSoup(r.content, 'html.parser')
+            loginData['__EVENTVALIDATION'] = soup.find('input', attrs={'name': '__EVENTVALIDATION'})['value']
+            loginData['__VIEWSTATE'] = soup.find('input', attrs={'name': '__VIEWSTATE'})['value']
+            r = s.post(web01Url01, data = loginData)
+            soup = BeautifulSoup(r.content, 'html.parser')
+            anchors = soup.find_all('a')
+            validated = False
+            for a in anchors:
+                if a.text == web01Content01:
+                    validated = True
+            if validated:
+                failCount = checkSuccess()
+                return failCount
+            failCount = checkFail(failCount)
             return failCount
-        failCount = checkFail(failCount)
+    except Exception as e:
+        print("something went wrong during pageCheck.")
+        failCount = MAXFAILCOUNT
         return failCount
+        
+
 
 
 def main(failCount, deathcount):
